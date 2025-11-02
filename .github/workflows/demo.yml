@@ -1,53 +1,73 @@
 name: Deploy website
+
 on:
   push:
     branches:
       - main
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Get code
+      - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Install dependencies
         run: npm ci
+
       - name: Lint code
         run: npm run lint
-      - name: Test code
+
+      - name: Run tests
         run: npm run test
+
   build:
     needs: test
     runs-on: ubuntu-latest
     outputs:
-      script-file: {{ steps.publish.outputs.script-file}}
+      script-file: ${{ steps.publish.outputs.script-file }}
     steps:
-      - name: Get code
+      - name: Checkout code
         uses: actions/checkout@v4
+
       - name: Install dependencies
         run: npm ci
+
       - name: Build website
         run: npm run build
+
       - name: Publish JS filename
         id: publish
-        run: find dist/assets/*.js -type f -execdir echo 'script_file={}' >> $GITHUB_OUTPUT ';'  
-      - name: Upload Artifact
+        run: |
+          echo "Finding built JS file..."
+          FILE=$(find dist/assets -type f -name "*.js" | head -n 1)
+          echo "script-file=$FILE" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: dist-files
           path: |
             dist
             package.json  
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Get Build Artifact
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: dist-files
-      - name: Output Contents
-        run: ls 
-      - name: Output Contents
-        run: echo "${{ needs.build.outputs.script-file}}"     
+
+      - name: List artifact contents
+        run: ls -R dist
+
+      - name: Show built JS file name
+        run: echo "Built script file: ${{ needs.build.outputs.script-file }}"
+
       - name: Deploy
-        run: echo "Deploying..."
+        run: |
+          echo "🚀 Deploying website..."
+          echo "Using JS file: ${{ needs.build.outputs.script-file }}"
+          # Example: scp -r dist user@server:/var/www/html
