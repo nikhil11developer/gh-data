@@ -25,6 +25,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     outputs:
+      # export the step output from the 'publish' step
       script-file: ${{ steps.publish.outputs.script-file }}
     steps:
       - name: Checkout code
@@ -40,7 +41,8 @@ jobs:
         id: publish
         run: |
           echo "Finding built JS file..."
-          FILE=$(find dist/assets -type f -name "*.js" | head -n 1)
+          # Find first JS file under dist/assets (adjust pattern if your build uses a different folder)
+          FILE=$(find dist/assets -type f -name "*.js" | head -n 1 || true)
           echo "script-file=$FILE" >> $GITHUB_OUTPUT
 
       - name: Upload artifact
@@ -49,7 +51,7 @@ jobs:
           name: dist-files
           path: |
             dist
-            package.json  
+            package.json
 
   deploy:
     needs: build
@@ -59,6 +61,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dist-files
+          path: ./dist
 
       - name: List artifact contents
         run: ls -R dist
@@ -66,8 +69,12 @@ jobs:
       - name: Show built JS file name
         run: echo "Built script file: ${{ needs.build.outputs.script-file }}"
 
-      - name: Deploy
+      - name: Deploy to server (placeholder)
+        env:
+          SCRIPT_FILE: ${{ needs.build.outputs.script-file }}
         run: |
           echo "🚀 Deploying website..."
-          echo "Using JS file: ${{ needs.build.outputs.script-file }}"
-          # Example: scp -r dist user@server:/var/www/html
+          echo "Using script file: $SCRIPT_FILE"
+          # Replace the example below with your real deploy steps:
+          # scp -r ./dist user@yourserver:/var/www/html
+          # OR use rsync/ssh + service restart, FTP, rsync to S3, etc.
